@@ -232,7 +232,11 @@ namespace AutoERDiagram
         {
             try
             {
-                var startInfo = new ProcessStartInfo("dot")
+                // Graphviz'in kurulu olduğu yeri tam olarak belirtiyoruz.
+                // Örneğin "C:\\Program Files\\Graphviz\\bin\\dot.exe" olabilir.
+                var graphvizDotPath = @"C:\Program Files\Graphviz\bin\dot.exe";
+
+                var startInfo = new ProcessStartInfo(graphvizDotPath)
                 {
                     Arguments = $"-Tpng \"{dotPath}\" -o \"{outputPng}\"",
                     CreateNoWindow = true,
@@ -253,6 +257,7 @@ namespace AutoERDiagram
                 Console.WriteLine(ex.Message);
             }
         }
+
     }
 
     /// <summary>
