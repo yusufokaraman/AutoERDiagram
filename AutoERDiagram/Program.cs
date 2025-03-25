@@ -1,5 +1,9 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
 using Microsoft.Data.SqlClient;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Diagnostics;
 
@@ -7,9 +11,20 @@ namespace AutoERDiagram
 {
     public class Program
     {
-        // Veritabanı bağlantı bilgilerinizi buraya uyarlayın:
+        // Veritabanı bağlantı bilgilerinizi buraya uyarlayın
         private const string ConnectionString =
-            "Server=10.35.36.3;Initial Catalog=ServerManagement;Connect Timeout=30;Encrypt=False;User Id=sa;Password=Abc123def!!!; TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False;MultipleActiveResultSets=true;";
+            "Server=10.35.36.3;Initial Catalog=ServerManagement;Connect Timeout=30;" +
+            "Encrypt=False;User Id=sa;Password=Abc123def!!!;" +
+            "TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False;MultipleActiveResultSets=true;";
+
+        // Çıktı dosyalarının kaydedileceği dizin:
+        // Burasını istediğiniz klasörle güncelleyebilirsiniz.
+        private static readonly string outputDirectory =
+            @"D:\projects\ykaraman\other_apps\AutoERDiagram\AutoERDiagram\bin\Debug\net8.0";
+
+        // Graphviz dot.exe tam yolu (Kurulumunuza göre güncelleyin!)
+        private static readonly string graphvizDotPath =
+            @"C:\Program Files\Graphviz\bin\dot.exe";
 
         public static void Main(string[] args)
         {
@@ -20,14 +35,15 @@ namespace AutoERDiagram
             string dotContent = GenerateDotFileContent(tables);
 
             // 3) diagram.dot dosyasına yaz
-            string dotFilePath = "diagram.dot";
-            File.WriteAllText(dotFilePath, dotContent, Encoding.UTF8);
+            //    Tam yolu net olsun diye outputDirectory + "diagram.dot"
+            string dotFilePath = Path.Combine(outputDirectory, "diagram.dot");
+            File.WriteAllText(dotFilePath, dotContent, new System.Text.UTF8Encoding(false));
 
             Console.WriteLine($"DOT dosyası oluşturuldu: {dotFilePath}");
+            Console.WriteLine("DOT dosyası tam yol: " + Path.GetFullPath(dotFilePath));
 
-            // 4) İsteğe bağlı olarak .dot'u .png'ye dönüştürme 
-            //    (makinenizde Graphviz kurulu ve 'dot' PATH'e ekli ise)
-            string pngFilePath = "diagram.png";
+            // 4) .dot'u .png'ye dönüştür
+            string pngFilePath = Path.Combine(outputDirectory, "diagram.png");
             ConvertDotToPng(dotFilePath, pngFilePath);
 
             Console.WriteLine("İşlem tamamlandı. Enter ile çıkabilirsiniz.");
@@ -160,22 +176,12 @@ namespace AutoERDiagram
             var sb = new StringBuilder();
             sb.AppendLine("digraph DatabaseDiagram {");
             sb.AppendLine("  rankdir=LR;"); // soldan sağa çizsin
-            sb.AppendLine("  node [shape=none];"); // her tablo node'u için shape=none kullanacağız (HTML label kullandığımız için)
+            sb.AppendLine("  node [shape=none];"); // her tablo node'u için shape=none kullanıyoruz (HTML label'la çiziyoruz)
 
             // Her tabloyu "node" olarak tanımlayalım
             foreach (var table in tables)
             {
                 // HTML benzeri bir label oluştur: tablo adı + kolon listesi
-                // Örnek:
-                //
-                // label=<
-                // <table border="1" cellborder="1" cellspacing="0">
-                //   <tr><td colspan="2">TableName</td></tr>
-                //   <tr><td>Column1</td><td>DataType</td></tr>
-                //   ...
-                // </table>
-                // >
-
                 sb.Append($"  \"{table.TableName}\" [label=<");
                 sb.Append("<table border=\"1\" cellborder=\"0\" cellspacing=\"0\" cellpadding=\"4\">");
 
@@ -190,7 +196,10 @@ namespace AutoERDiagram
                     sb.Append($"<td align=\"left\">{col.DataType}");
 
                     // Eğer max_length > 0 ise uzunluğu da gösterelim (örn: varchar(50))
-                    if (col.MaxLength > 0 && col.DataType != "int" && col.DataType != "bigint")
+                    if (col.MaxLength > 0 &&
+                        col.DataType != "int" &&
+                        col.DataType != "bigint" &&
+                        col.DataType != "uniqueidentifier")
                     {
                         sb.Append($"({col.MaxLength})");
                     }
@@ -225,31 +234,53 @@ namespace AutoERDiagram
         }
 
         /// <summary>
-        /// diagram.dot dosyasını Graphviz kullanarak diagram.png'e dönüştürür
-        /// (Sistemde 'dot' komutu yüklü ve PATH'te olmalı)
+        /// diagram.dot dosyasını Graphviz kullanarak diagram.png'ye dönüştürür
+        /// (Sistemde 'dot.exe' kurulu ve graphvizDotPath doğru ayarlı olmalı)
         /// </summary>
         private static void ConvertDotToPng(string dotPath, string outputPng)
         {
             try
             {
-                // Graphviz'in kurulu olduğu yeri tam olarak belirtiyoruz.
-                // Örneğin "C:\\Program Files\\Graphviz\\bin\\dot.exe" olabilir.
-                var graphvizDotPath = @"C:\Program Files\Graphviz\bin\dot.exe";
-
+                // Eğer PATH'e ekli ise sadece "dot" da diyebilirsiniz,
+                // ama burada tam yol kullanıyoruz.
                 var startInfo = new ProcessStartInfo(graphvizDotPath)
                 {
                     Arguments = $"-Tpng \"{dotPath}\" -o \"{outputPng}\"",
                     CreateNoWindow = true,
-                    UseShellExecute = false
+                    UseShellExecute = false,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true
                 };
 
                 using (var proc = new Process { StartInfo = startInfo })
                 {
                     proc.Start();
-                    proc.WaitForExit();
-                }
 
-                Console.WriteLine($"PNG diyagram oluşturuldu: {outputPng}");
+                    // Komut çalışırken gelecek tüm çıktıyı okuyalım
+                    string output = proc.StandardOutput.ReadToEnd();
+                    string error = proc.StandardError.ReadToEnd();
+
+                    proc.WaitForExit();
+
+                    // Komut satırı çıktılarını ekrana basalım (hata var mı görelim)
+                    if (!string.IsNullOrEmpty(output))
+                        Console.WriteLine("dot output: " + output);
+                    if (!string.IsNullOrEmpty(error))
+                        Console.WriteLine("dot error: " + error);
+
+                    Console.WriteLine("dot exit code: " + proc.ExitCode);
+
+                    // Başarılı sonuç
+                    if (proc.ExitCode == 0)
+                    {
+                        Console.WriteLine($"PNG diyagram oluşturuldu: {outputPng}");
+                        Console.WriteLine("PNG diyagram tam yol: " + Path.GetFullPath(outputPng));
+                    }
+                    else
+                    {
+                        Console.WriteLine("dot komutu hata ile sonuçlandı, PNG oluşmadı.");
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -257,7 +288,6 @@ namespace AutoERDiagram
                 Console.WriteLine(ex.Message);
             }
         }
-
     }
 
     /// <summary>
