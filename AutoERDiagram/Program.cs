@@ -175,8 +175,9 @@ namespace AutoERDiagram
         {
             var sb = new StringBuilder();
             sb.AppendLine("digraph DatabaseDiagram {");
+            sb.AppendLine("  graph [size=\"16,9\", ratio=fill];");
             sb.AppendLine("  rankdir=LR;"); // soldan sağa çizsin
-            sb.AppendLine("  node [shape=none];"); // her tablo node'u için shape=none kullanıyoruz (HTML label'la çiziyoruz)
+            sb.AppendLine("  node [shape=none, fontsize=12, fontname=\"Arial\"];"); // her tablo node'u için shape=none kullanıyoruz (HTML label'la çiziyoruz)
 
             // Her tabloyu "node" olarak tanımlayalım
             foreach (var table in tables)
@@ -245,7 +246,8 @@ namespace AutoERDiagram
                 // ama burada tam yol kullanıyoruz.
                 var startInfo = new ProcessStartInfo(graphvizDotPath)
                 {
-                    Arguments = $"-Tpng \"{dotPath}\" -o \"{outputPng}\"",
+                    //Arguments = $"-Tpng \"{dotPath}\" -o \"{outputPng}\"",
+                    Arguments = $"-Tpng -Gdpi=300 \"{dotPath}\" -o \"{outputPng}\"",
                     CreateNoWindow = true,
                     UseShellExecute = false,
                     RedirectStandardError = true,
