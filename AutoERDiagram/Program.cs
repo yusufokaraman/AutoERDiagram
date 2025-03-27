@@ -174,29 +174,44 @@ namespace AutoERDiagram
         private static string GenerateDotFileContent(List<TableModel> tables)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("digraph DatabaseDiagram {");
-            sb.AppendLine("  graph [size=\"16,9\", ratio=fill];");
-            sb.AppendLine("  rankdir=LR;"); // soldan sağa çizsin
-            sb.AppendLine("  node [shape=none, fontsize=12, fontname=\"Arial\"];"); // her tablo node'u için shape=none kullanıyoruz (HTML label'la çiziyoruz)
 
-            // Her tabloyu "node" olarak tanımlayalım
+            sb.AppendLine("digraph DatabaseDiagram {");
+            sb.AppendLine("  // Daha kompakt bir layout için graph ayarları:");
+            sb.AppendLine("  graph [");
+            sb.AppendLine("    // Düğümlerin üst üste binmesini önle ve kompaktlaştır");
+            sb.AppendLine("    overlap=false,");
+
+            sb.AppendLine("    // ranksep = satırlar (veya sütunlar) arası mesafe, nodesep = yanyana node aralığı");
+            sb.AppendLine("    ranksep=0.4,");
+            sb.AppendLine("    nodesep=0.3,");
+
+            sb.AppendLine("    // DPI ile diyagramın çözünürlüğünü artırabilirsiniz");
+            sb.AppendLine("    dpi=200,");
+
+            sb.AppendLine("    // margin diyagram kenar boşluğu (istemiyorsanız küçültebilirsiniz)");
+            sb.AppendLine("    margin=0.2");
+
+            sb.AppendLine("  ];");
+
+            // soldan sağa çiz (isteğe bağlı)
+            sb.AppendLine("  rankdir=LR;");
+
+            // varsayılan node ayarları (fontsize, fontname vb.)
+            sb.AppendLine("  node [shape=none, fontsize=12, fontname=\"Arial\"];");
+
+            // Her tabloyu bir node olarak tanımlayalım
             foreach (var table in tables)
             {
-                // HTML benzeri bir label oluştur: tablo adı + kolon listesi
                 sb.Append($"  \"{table.TableName}\" [label=<");
                 sb.Append("<table border=\"1\" cellborder=\"0\" cellspacing=\"0\" cellpadding=\"4\">");
-
-                // Başlık (Tablo Adı)
                 sb.Append($"<tr><td colspan=\"2\" bgcolor=\"#D3D3D3\"><b>{table.TableName}</b></td></tr>");
 
-                // Kolonlar
                 foreach (var col in table.Columns)
                 {
                     sb.Append("<tr>");
                     sb.Append($"<td align=\"left\" port=\"{col.ColumnName}\">{col.ColumnName}</td>");
                     sb.Append($"<td align=\"left\">{col.DataType}");
 
-                    // Eğer max_length > 0 ise uzunluğu da gösterelim (örn: varchar(50))
                     if (col.MaxLength > 0 &&
                         col.DataType != "int" &&
                         col.DataType != "bigint" &&
@@ -215,8 +230,8 @@ namespace AutoERDiagram
                 }
 
                 sb.Append("</table>");
-                sb.Append(">"); // label bitişi
-                sb.AppendLine("];");
+                sb.Append(">];");
+                sb.AppendLine();
             }
 
             // Foreign key ilişkilerini çizen kısım
@@ -224,8 +239,6 @@ namespace AutoERDiagram
             {
                 foreach (var fk in table.ForeignKeys)
                 {
-                    // "FKTable"dan "PKTable"a ok çizeceğiz
-                    // Label olarak FKColumnName'i kullanabiliriz
                     sb.AppendLine($"  \"{fk.FKTable}\" -> \"{fk.PKTable}\" [label=\"{fk.FKColumnName}\"];");
                 }
             }
@@ -233,6 +246,7 @@ namespace AutoERDiagram
             sb.AppendLine("}");
             return sb.ToString();
         }
+
 
         /// <summary>
         /// diagram.dot dosyasını Graphviz kullanarak diagram.png'ye dönüştürür
@@ -247,7 +261,7 @@ namespace AutoERDiagram
                 var startInfo = new ProcessStartInfo(graphvizDotPath)
                 {
                     //Arguments = $"-Tpng \"{dotPath}\" -o \"{outputPng}\"",
-                    Arguments = $"-Tpng -Gdpi=300 \"{dotPath}\" -o \"{outputPng}\"",
+                    Arguments = $"-Tpng -Gdpi=200 \"{dotPath}\" -o \"{outputPng}\"",
                     CreateNoWindow = true,
                     UseShellExecute = false,
                     RedirectStandardError = true,
