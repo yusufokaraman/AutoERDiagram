@@ -176,30 +176,26 @@ namespace AutoERDiagram
             var sb = new StringBuilder();
 
             sb.AppendLine("digraph DatabaseDiagram {");
-            sb.AppendLine("  // Daha kompakt bir layout için graph ayarları:");
+            sb.AppendLine("  // Daha yatay (landscape) ve kompakt bir layout için graph ayarları:");
             sb.AppendLine("  graph [");
-            sb.AppendLine("    // Düğümlerin üst üste binmesini önle ve kompaktlaştır");
+            sb.AppendLine("    orientation=landscape,  // PS/PDF çıktısında kesin etki, PNG'de bazen yardımcı olur");
+            sb.AppendLine("    size=\"16,9\",           // 16x9 çerçeve");
+            sb.AppendLine("    dpi=200,                // çözünürlük");
             sb.AppendLine("    overlap=false,");
-
-            sb.AppendLine("    // ranksep = satırlar (veya sütunlar) arası mesafe, nodesep = yanyana node aralığı");
-            sb.AppendLine("    ranksep=0.4,");
-            sb.AppendLine("    nodesep=0.3,");
-
-            sb.AppendLine("    // DPI ile diyagramın çözünürlüğünü artırabilirsiniz");
-            sb.AppendLine("    dpi=200,");
-
-            sb.AppendLine("    // margin diyagram kenar boşluğu (istemiyorsanız küçültebilirsiniz)");
-            sb.AppendLine("    margin=0.2");
-
+            sb.AppendLine("    pack=true,");
+            sb.AppendLine("    packMode=\"node\",");
+            sb.AppendLine("    ranksep=0.4,            // satır/sütun arası mesafe");
+            sb.AppendLine("    nodesep=0.3,            // node’lar arası mesafe");
+            sb.AppendLine("    margin=0.2              // kenar boşluğu");
             sb.AppendLine("  ];");
 
-            // soldan sağa çiz (isteğe bağlı)
+            // Soldan sağa çizilsin
             sb.AppendLine("  rankdir=LR;");
 
-            // varsayılan node ayarları (fontsize, fontname vb.)
+            // Varsayılan node ayarları
             sb.AppendLine("  node [shape=none, fontsize=12, fontname=\"Arial\"];");
 
-            // Her tabloyu bir node olarak tanımlayalım
+            // Tablolar (node) HTML tablo olarak
             foreach (var table in tables)
             {
                 sb.Append($"  \"{table.TableName}\" [label=<");
@@ -221,6 +217,7 @@ namespace AutoERDiagram
                     }
 
                     if (!col.IsNullable)
+                    if (!col.IsNullable)
                     {
                         sb.Append(" NOT NULL");
                     }
@@ -234,7 +231,7 @@ namespace AutoERDiagram
                 sb.AppendLine();
             }
 
-            // Foreign key ilişkilerini çizen kısım
+            // Foreign key ilişkileri
             foreach (var table in tables)
             {
                 foreach (var fk in table.ForeignKeys)
@@ -246,6 +243,7 @@ namespace AutoERDiagram
             sb.AppendLine("}");
             return sb.ToString();
         }
+
 
 
         /// <summary>
