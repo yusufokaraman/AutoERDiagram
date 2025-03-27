@@ -245,7 +245,6 @@ namespace AutoERDiagram
         }
 
 
-
         /// <summary>
         /// diagram.dot dosyasını Graphviz kullanarak diagram.png'ye dönüştürür
         /// (Sistemde 'dot.exe' kurulu ve graphvizDotPath doğru ayarlı olmalı)
@@ -254,8 +253,6 @@ namespace AutoERDiagram
         {
             try
             {
-                // Eğer PATH'e ekli ise sadece "dot" da diyebilirsiniz,
-                // ama burada tam yol kullanıyoruz.
                 var startInfo = new ProcessStartInfo(graphvizDotPath)
                 {
                     //Arguments = $"-Tpng \"{dotPath}\" -o \"{outputPng}\"",
@@ -270,13 +267,11 @@ namespace AutoERDiagram
                 {
                     proc.Start();
 
-                    // Komut çalışırken gelecek tüm çıktıyı okuyalım
                     string output = proc.StandardOutput.ReadToEnd();
                     string error = proc.StandardError.ReadToEnd();
 
                     proc.WaitForExit();
 
-                    // Komut satırı çıktılarını ekrana basalım (hata var mı görelim)
                     if (!string.IsNullOrEmpty(output))
                         Console.WriteLine("dot output: " + output);
                     if (!string.IsNullOrEmpty(error))
